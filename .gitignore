@@ -1,0 +1,3 @@
+checkpoint_scripts/archive/*
+checkpoint_scripts/__pycache__/*
+checkpoint_scripts/config/*
