@@ -77,7 +77,14 @@ class GlobalConfigCtx(BaseConfig):
 
         # load spec app info
         if self.__base_config["CPU2017"]:
-            self.__spec_app_info = super().load_yaml("spec_info/spec17.json")
+            mode = self.__base_config.get("mode", "speed")
+            spec_info_map = {
+                "speed": "spec_info/spec17_speed.json",
+                "rate": "spec_info/spec17.json",
+            }
+            if mode not in spec_info_map:
+                raise ValueError(f"Invalid mode '{mode}', expected 'speed' or 'rate'")
+            self.__spec_app_info = super().load_yaml(spec_info_map[mode])
         else:
             self.__spec_app_info = super().load_yaml("spec_info/spec06.json")
 
@@ -153,7 +160,8 @@ class GlobalConfigCtx(BaseConfig):
         else:
             spec_20xx = "spec06"
 
-        folder_name = f'{spec_20xx}_{archive_id_config["gcc_version"]}_{archive_id_config["riscv_ext"]}_{archive_id_config["base_or_fixed"]}_{archive_id_config["special_flag"]}_{base_config["emulator"]}_{archive_id_config["group"]}_{time}'
+        mode = base_config.get("mode", "speed")
+        folder_name = f'{spec_20xx}_{mode}_{archive_id_config["gcc_version"]}_{archive_id_config["riscv_ext"]}_{archive_id_config["base_or_fixed"]}_{archive_id_config["special_flag"]}_{base_config["emulator"]}_{archive_id_config["group"]}_{time}'
         return folder_name
 
 def generate_buffer_folder(archive_buffer_layout):

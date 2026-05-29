@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import argparse
 from pathlib import Path
 from itertools import product
 
@@ -28,6 +29,87 @@ spec2017_int_list = [
 ]
 
 spec2017_fp_list = list(set(spec_2017_list) - set(spec2017_int_list))
+
+spec_2017_fp_speed_list = [
+    "bwaves_1",
+    "bwaves_2",
+    "cactuBSSN",
+    "cam4",
+    "fotonik3d",
+    "imagick",
+    "nab",
+    "roms",
+    "wrf",
+    "pop2",
+    "lbm",
+]
+
+spec_2017_int_speed_list = [
+    "deepsjeng",
+    "exchange2",
+    "gcc_pp_opts_O5_fipa-pta",
+    "gcc_pp_opts_O5_finline-limit_1000",
+    "gcc_pp_opts_O5_finline-limit_24000",
+    "leela",
+    "mcf",
+    "omnetpp",
+    "perlbench_diff",
+    "perlbench_spam",
+    "perlbench_split",
+    "x264_pass1",
+    "x264_pass2",
+    "x264_seek",
+    "xalancbmk",
+    "xz_cld",
+    "xz_cpu2006",
+]
+
+spec_2017_fp_rate_list = [
+    "blender",
+    "bwaves_1",
+    "bwaves_2",
+    "bwaves_3",
+    "bwaves_4",
+    "cactuBSSN",
+    "cam4",
+    "fotonik3d",
+    "imagick",
+    "lbm",
+    "nab",
+    "namd",
+    "parest",
+    "povray",
+    "roms",
+    "wrf",
+]
+
+spec_2017_int_rate_list = [
+    "deepsjeng",
+    "exchange2",
+    "gcc_pp_O2",
+    "gcc_pp_O3",
+    "gcc_ref32_O3",
+    "gcc_ref32_O5",
+    "gcc_small_O3",
+    "leela",
+    "mcf",
+    "omnetpp",
+    "perlbench_diff",
+    "perlbench_spam",
+    "perlbench_split",
+    "x264_pass1",
+    "x264_pass2",
+    "x264_seek",
+    "xalancbmk",
+    "xz_cld",
+    "xz_combined",
+    "xz_cpu2006",
+]
+
+spec_list_map = {
+    "speed": {"int": spec_2017_int_speed_list, "fp": spec_2017_fp_speed_list, "all": spec_2017_int_speed_list + spec_2017_fp_speed_list},
+    "rate": {"int": spec_2017_int_rate_list, "fp": spec_2017_fp_rate_list, "all": spec_2017_int_rate_list + spec_2017_fp_rate_list},
+}
 
 
 def profiling_instrs(profiling_log, spec_app, using_new_script=False):
@@ -139,33 +221,6 @@ def generate_result_list(base_path, times, ids):
     return result_list
 
 
-#base_path="/nfs/home/jiaxiaoyu/profiling_env/auto_generate_env/archive/gcc12.2.0_rv64gc_base_nospecial_NEMU_archgroup_2024-05-31-19-01"
-#base_path="/nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec06_rv64gcbv_20m_gcc14.1.0_libquantum_hmmer_h264_without_segment"
-
-#result = {
-#    "cl_res":
-#        os.path.join(
-#            base_path, "cluster-0-0"
-#        ),
-#    "profiling_log":
-#        os.path.join(
-#            base_path, "logs","profiling-0"
-#        ),
-#    "checkpoint_path":
-#        os.path.join(
-#            base_path, "checkpoint-0-0-0"
-#        ),
-#    "json_path":
-#        os.path.join(
-#            base_path, "checkpoint-0-0-0","cluster-0-0.json"
-#        ),
-#    "list_path":
-#        os.path.join(
-#            base_path, "checkpoint-0-0-0","checkpoint.lst"
-#        )
-#}
-
-
 def dump_result(base_path, spec_app_list, times, ids):
     result_list = generate_result_list(base_path, times, ids)
 
@@ -176,11 +231,17 @@ def dump_result(base_path, spec_app_list, times, ids):
                                          result["list_path"], json_result)
 
 
-#/nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec06_rv64gcbv_20m_gcc14.1.0_libquantum_hmmer_h264_without_segment/checkpoint-0-0-0/h264ref_sss
-spec_list=["hmmer_nph3", "hmmer_retro", "libquantum", "h264ref_foreman.baseline", "h264ref_foreman.main", "h264ref_sss"]
-#base_path = "/nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec17-rv64gcb-O3-20m-gcc12.2.0-mix-with-special_wrf"
-base_path = "/nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec06_rv64gcbv_20m_gcc14.1.0_libquantum_hmmer_h264_without_segment"
-times = [1, 1, 1]
-ids = [0, 0, 0]
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Dump checkpoint results with spec list and weights")
+    parser.add_argument("--base-path", required=True, help="checkpoint archive path")
+    parser.add_argument("--mode", default="speed", choices=["speed", "rate"], help="SPEC mode (default: speed)")
+    parser.add_argument("--suite", default="int", choices=["int", "fp", "all"], help="int/fp/all suite (default: int)")
+    parser.add_argument("--times", default="1,1,1", help="profiling,cluster,checkpoint run times")
+    parser.add_argument("--ids", default="0,0,0", help="profiling,cluster,checkpoint start ids")
+    args = parser.parse_args()
 
-dump_result(base_path, spec_list, times, ids)
+    spec_list = spec_list_map[args.mode][args.suite]
+    times = [int(x) for x in args.times.split(",")]
+    ids = [int(x) for x in args.ids.split(",")]
+
+    dump_result(args.base_path, spec_list, times, ids)

@@ -1,3 +1,12 @@
+# RISC-V SimPoint Checkpoint 生成工具
+
+自动生成 RISC-V SimPoint Checkpoint 的工具集，支持 SPEC CPU2006/2017 的 Profiling → Cluster → Checkpoint 三阶段流程。
+
+> 详细文档见 [doc/](doc/) 目录：
+> - [架构概述](doc/architecture.md) — 三阶段流程、数据流、核心模块
+> - [配置参考](doc/config-reference.md) — 所有配置字段说明、环境变量
+> - [Speed/Rate 模式](doc/speed-rate-mode.md) — 两种测试模式的区别与切换
+
 ## 环境准备
 
 ### 可以访问公共服务器
@@ -85,62 +94,120 @@ export QEMU_HOME=/path/to/qemu
 ### 多核检查点
 - 在导入环境变量之后仅需按照下述说明修改配置文件，并保证 `copies` 字段大于 1 即可（目前的环境下请保证该字段小于 4 ）
 
-### 使用说明
-- 克隆这个仓库[https://github.com/xyyy1420/checkpoint_scripts.git](https://github.com/xyyy1420/checkpoint_scripts.git) 到任意目录
-- 进入 checkpoint_scripts 目录
-- 参数说明
+## 使用说明
 
-```
-usage: generate_checkpoint.py [--config]
+### 1. 克隆仓库
 
-Auto profiling and checkpointing
-
-optional arguments:
-  --config              指定配置文件
+```bash
+git clone https://github.com/xyyy1420/checkpoint_scripts.git
+cd checkpoint_scripts/checkpoint_scripts
 ```
 
-- 配置文件说明
+### 2. 修改配置文件
+
+编辑 `config.yaml`，完整字段说明：
 
 ```yaml
 base_config:
-  message: "NULL" # 通常为空
-  spec_app_list: null # 与下面的 spec_apps 选项作用一致，这里填写一个 list 文件的路径，list 文件中每行一个子项
-  spec_apps: "gcc_scilab" # 这里填写用英文逗号分割的子项
-  elf_folder: "./jemalloc_elf" # 使用的 elf 的路径
-  times: "1,1,1" # profiling cluster checkpoint 各运行的次数
-  start_id: "0,0,0" # profiling cluster checkpoint 各运行的结果保存路径的起始 id
-  emulator: "QEMU" # 用于 profiling 和 checkpoint 的模拟器，可选 "QEMU" 或者 "NEMU"
-  build_bbl_only: false # 设置为 true 时编译完所有的 workload 后结束运行
-  max_threads: 70 # profiling cluster checkpoint 时可以使用的最大线程数
-  CPU2017: false # 目标 elf 是否是 speccpu2017
-  generate_rootfs_script_only: false # 是否仅生成 rootfs 脚本之后停止
-  copies: 2 # profiling 和 checkpoint 并行执行多少个 spec 子项，当 copies=1 时 kernel 将放置在 0x80200000，否则 kernel 将放置在 0x80800000
-  archive_id: null # 如果设置了 archive_id 将跳过 workload 构建前的阶段，直接使用该 id 下已有的 workload
-  redirect_output: false # 是否重定向子项的输出
-  cpu_bind: 0 # useless
-  mem_bind: 0 # useless
-  bootloader: "opensbi" # 使用 opensbi 还是 riscv-pk 作为启动器，riscv-pk 的流程目前维护不佳
-  all_in_one_workload: true # 如果使用 all in one workload，将会使用 gcpt 链接 workload，生成的 workload 可以直接被启动，在使用 QEMU 作为模拟器时，必须使用 all in one workload
-  boot_for_test: true # 设置为 true 时将在构建完 workload 使用上述配置文件中指定的模拟器运行 1min
-archive_id_config: # 配置生成的 archive id，仅影响结果放置在哪里
+  message: "NULL"                 # 通常为空
+  spec_app_list: null             # 列表文件路径（.lst），每行一个子项名，优先级高于 spec_apps
+  spec_apps: "mcf,omnetpp"       # 逗号分隔的子项名
+  elf_folder: "./jemalloc_elf"    # SPEC ELF 二进制文件目录
+  times: "1,1,1"                  # profiling,cluster,checkpoint 各阶段运行次数
+  start_id: "0,0,0"              # 各阶段结果保存路径的起始 id
+  emulator: "NEMU"                # "NEMU" 或 "QEMU"
+  build_bbl_only: false           # 仅构建 workload，不执行三阶段
+  max_threads: 70                 # 最大并行线程数
+  mode: "speed"                   # "speed" 或 "rate"，默认 "speed"
+  CPU2017: true                   # true=SPEC2017, false=SPEC2006
+  generate_rootfs_script_only: false  # 仅生成 rootfs 脚本后停止
+  copies: 1                       # 1=单核(kernel @ 0x80200000), 2~4=多核(kernel @ 0x80800000)
+  archive_id: null                # 指定已有 archive_id，跳过构建直接执行三阶段
+  redirect_output: false          # 重定向子项输出到 out.log/err.log
+  cpu_bind: 0                     # （无效）
+  mem_bind: 0                     # （无效）
+  bootloader: "opensbi"           # "opensbi"（推荐）或 "riscv-pk"
+  all_in_one_workload: true       # 使用 gcpt 链接 workload，QEMU 时必须为 true
+  boot_for_test: true             # 构建后用模拟器运行 1min 测试
+  enable_h_ext: false             # 启用 H 扩展支持（构建 host Linux）
+archive_id_config:                # 影响生成 checkpoint 目录的命名
   gcc_version: "gcc12.2.0"
   riscv_ext: "rv64gcb"
   base_or_fixed: "base"
-  special_flag: "intFppOff_for_qemu_dual_core"
+  special_flag: "your_flag"
   group: "archgroup"
 ```
 
-- 一键checkpoint
+也可以使用 `config/` 目录下的预定义配置：
+
+```bash
+python3 generate_checkpoint.py --config config/config-llvm19.yaml
 ```
+
+### 3. 生成 Checkpoint
+
+```bash
+# 使用默认 config.yaml
 python3 generate_checkpoint.py --config config.yaml
+
+# 使用预定义配置
+python3 generate_checkpoint.py --config config/config-llvm19.yaml
 ```
-- 导出 checkpoint list 和权重文件
-    - 修改 dump_result.py 文件中的 spec_list，base_path
-    - 运行该脚本，随后会在 checkpoint 目录下生成 list 文件和 权重文件
 
-- 本脚本目前仅维护使用opensbi的环境
+### 4. 导出结果
 
-- Reference
-    - https://github.com/OpenXiangShan/riscv-rootfs/blob/master/rootfsimg/spec_gen.py
-        - checkpoint_scripts/spec_info/spec06.json 和 checkpoint_scripts/spec_info/spec17.json 是通过该仓库的脚本修改而来
-        - checkpoint_scripts/generate_bbl.py 中的 default_initramfs_file，prepare_rootfs，traverse_path，__generate_initramfs，__generate_run_scripts 都是取自该仓库的脚本
+```bash
+# 导出 speed 模式 int 套件的结果
+python3 dump_result.py --base-path /path/to/archive --mode speed --suite int
+
+# 导出 rate 模式 fp 套件的结果
+python3 dump_result.py --base-path /path/to/archive --mode rate --suite fp
+
+# 导出全部子项
+python3 dump_result.py --base-path /path/to/archive --mode speed --suite all
+```
+
+参数说明：
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--base-path` | checkpoint archive 目录路径（必填） | - |
+| `--mode` | SPEC 模式：`speed` 或 `rate` | `speed` |
+| `--suite` | 套件类型：`int`、`fp` 或 `all` | `int` |
+| `--times` | 三个阶段运行次数，逗号分隔 | `1,1,1` |
+| `--ids` | 三个阶段起始 ID，逗号分隔 | `0,0,0` |
+
+### 5. 筛选 Checkpoint 点
+
+```bash
+# 按权重覆盖率筛选（保留权重覆盖 80% 的点）
+python3 select_points.py -i /path/to/cluster-0-0.json -o output_name -w 0.8
+
+# 按数量上限筛选
+python3 select_points.py -i /path/to/cluster-0-0.json -o output_name -c 5
+```
+
+## Speed 与 Rate 模式
+
+SPEC CPU2017 有两种测试模式，通过 config.yaml 中的 `mode` 字段切换：
+
+| | Speed 模式 | Rate 模式 |
+|--|-----------|----------|
+| 用途 | 测量单任务完成时间 | 测量系统吞吐量 |
+| `mode` 值 | `"speed"` | `"rate"` |
+| 加载文件 | `spec17_speed.json` (28个) | `spec17.json` (36个) |
+| 独有 benchmark | pop2 | namd, parest, povray, blender |
+
+两种模式的 benchmark 子集和输入参数不同，详见 [Speed/Rate 模式文档](doc/speed-rate-mode.md)。
+
+## 注意事项
+
+- 本脚本目前仅维护使用 opensbi 的环境
+- 使用 QEMU 时 `all_in_one_workload` 必须为 `true`
+- `copies` 为 1 时 kernel 放置在 0x80200000，大于 1 时放置在 0x80800000
+
+## Reference
+
+- https://github.com/OpenXiangShan/riscv-rootfs/blob/master/rootfsimg/spec_gen.py
+    - checkpoint_scripts/spec_info/spec06.json 和 checkpoint_scripts/spec_info/spec17.json 是通过该仓库的脚本修改而来
+    - checkpoint_scripts/generate_bbl.py 中的 default_initramfs_file，prepare_rootfs，traverse_path，__generate_initramfs，__generate_run_scripts 都是取自该仓库的脚本

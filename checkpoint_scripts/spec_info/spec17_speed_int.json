@@ -33,11 +33,11 @@
             "gcc/gcc-pp.c"
         ],
         "args": [
-          "gcc-pp.c",
-          "-O5",
-          "-fipa-pta",
-          "-o",
-          "gcc-pp.opts-O5_-fipa-pta.s"
+            "gcc-pp.c",
+            "-O5",
+            "-fipa-pta",
+            "-o",
+            "gcc-pp.opts-O5_-fipa-pta.s"
         ],
         "type": [
             "int",
@@ -48,7 +48,7 @@
         "base_name": "gcc",
         "files": [
             "gcc/control",
-            "gcc/gcc-pp.c",
+            "gcc/gcc-pp.c"
         ],
         "args": [
             "gcc-pp.c",
@@ -68,7 +68,7 @@
         "base_name": "gcc",
         "files": [
             "gcc/control",
-            "gcc/gcc-pp.c",
+            "gcc/gcc-pp.c"
         ],
         "args": [
             "gcc-pp.c",
@@ -3527,5 +3527,5 @@
             "int",
             "ref"
         ]
-    },
+    }
 }

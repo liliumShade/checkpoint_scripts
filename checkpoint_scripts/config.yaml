@@ -1,27 +1,31 @@
 base_config:
   message: "NULL"
-  spec_app_list: null
-  spec_apps: "cactusADM,tonto"
-  elf_folder: "./jemalloc_elf"
+  # TODO 用于的SPEC例子测试列表路径
+  spec_app_list: "/nfs/home/haokangda/checkpoint_scripts/checkpoint_scripts/spec2017-fp.lst"
+  spec_apps: null
+  # TODO ELF二进制文件目录
+  elf_folder: "/nfs/home/haokangda/elf2ckpt/spec2017/251021_spec2017_bin_riscv_xscc_kmhv2.base_ref_speed"
   times: "1,1,1"
   start_id: "0,0,0"
-  emulator: "QEMU"
-  build_bbl_only: true
+  emulator: "NEMU"
+  build_bbl_only: false
   max_threads: 70
-  CPU2017: false
+  mode: "speed" # 可选 "speed" 或 "rate"
+  CPU2017: true
   generate_rootfs_script_only: false
-  copies: 2
+  copies: 1
   archive_id: null
   redirect_output: false
   cpu_bind: 0
   mem_bind: 0
   bootloader: "opensbi"
   all_in_one_workload: true
-  boot_for_test: false
+  boot_for_test: true
   enable_h_ext: false
 archive_id_config:
-  gcc_version: "gcc12.2.0"
+  # TODO 如实修改，影响生成checkpoints目录的命名
+  gcc_version: "xscc"
   riscv_ext: "rv64gcb"
   base_or_fixed: "base"
-  special_flag: "intFppOff_for_qemu_dual_core"
+  special_flag: "kmh-2017-fp-speed"
   group: "archgroup"
